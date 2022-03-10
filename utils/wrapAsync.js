@@ -3,3 +3,5 @@ const wrapAsync = fun => {
     fun(req, res, next).catch(e => next(e));
   };
 };
+
+module.exports = wrapAsync;
