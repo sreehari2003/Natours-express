@@ -19,6 +19,7 @@ exports.signup = catchAsync(async (req, res, next) => {
   });
   //custom function to create token
   const token = createToken(newUser._id);
+  newUser.password = undefined;
 
   res.status(200).json({
     ok: true,
@@ -57,14 +58,16 @@ exports.login = catchAsync(async (req, res, next) => {
 exports.protect = catchAsync(async (req, res, next) => {
   //1)get the token and check if its there  ?
   let token;
-  if (req.headers && req.headers.authorization.startsWith('Bearer')) {
+  if (
+    req.headers &&
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
     token = req.headers.authorization.split(' ')[1];
+  } else {
+    return next(new AppError('user not logged in ', 401));
   }
-  if (!token) {
-    //no return added
-    next(new AppError('you are not logged in', 401));
-    res.redirect('/login');
-  }
+
   //2)verify the token !
 
   const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
@@ -75,19 +78,42 @@ exports.protect = catchAsync(async (req, res, next) => {
   const checkUser = await User.findById(decoded.id);
 
   if (!checkUser) {
-    next(new AppError('user does not exist', 401));
+    return next(new AppError('user does not exist', 401));
   }
   //4)if user change after password was issued ?
   //5)
+  if (checkUser.changedPassword(decoded.iat)) {
+    return next(
+      new AppError('user recently changed password please login again', 401)
+    );
+  }
 
+  //grant access to protected route
+  req.user = checkUser;
   next();
 });
 
-//restricting the user to delete the user account
+// restricting the user to delete the user account
 
-// exports.restrictTo = (...roles)=>{
-//   //roles is a array eg = ["Adimin","Guide","etc"]
-//    return (req, res, next)=>{
-//        if(!)
-//   }
-// }
+exports.restrictTo = (...roles) => {
+  //roles is a array eg = ["Adimin","Guide","etc"]
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return next(new AppError('user does not have permission to delete', 403));
+    }
+    next();
+  };
+};
+
+exports.forgotPassword = catchAsync(async (req, res, next) => {
+  const use = await User.findOne({ email: req.body.email });
+  if (!use) {
+    return next(new AppError('no user exist with given email', 404));
+  }
+  //genrate the random token
+
+  const token = use.createPasswordResetToken();
+
+  //prevent modal from run validation
+  await use.save({ validateBeforeSave: false });
+});

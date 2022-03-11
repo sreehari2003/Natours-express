@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
 const userDATA = new mongoose.Schema({
@@ -38,7 +39,10 @@ const userDATA = new mongoose.Schema({
     type: String,
     enum: ['user', 'guide', 'lead-guide', 'admin'],
     default: 'user'
-  }
+  },
+  passWordChangedAt: Date,
+  passWordResetToken: String,
+  passWordResetExpired: Date
 });
 
 //ENcrypting the password
@@ -55,6 +59,31 @@ userDATA.pre('save', async function(next) {
 //userpass = hash
 userDATA.methods.correctPassword = async function(candPass, userPAss) {
   return await bcrypt.compare(candPass, userPAss);
+};
+userDATA.methods.changedPassword = function(jwtTime) {
+  if (this.passWordChangedAt) {
+    const changeTime = parseInt(this.passWordChangedAt.getTime() / 1000, 10);
+
+    return changeTime > jwtTime;
+  }
+
+  //not changed
+  return false;
+};
+
+userDATA.methods.createPasswordResetToken = function() {
+  //going to send this on email
+  const resetToken = crypto.randomBytes(32).toString('hex');
+
+  //encryping token just for security purposes
+  this.passWordResetToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
+  this.passWordResetExpired = Date.now() + 10 * 60 * 1000;
+
+  return resetToken;
 };
 
 const User = mongoose.model('User', userDATA);
