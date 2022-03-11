@@ -1,11 +1,13 @@
 const express = require('express');
 const userController = require('./../controllers/userController');
 const authController = require('./../controllers/Auth/authController');
-
+const { protect, restrictTo } = authController;
 const router = express.Router();
 
 router.post('/signup', authController.signup);
 router.post('/login', authController.login);
+
+router.post('/forgotPassword', authController.forgotPassword);
 
 router
   .route('/')
@@ -16,6 +18,10 @@ router
   .route('/:id')
   .get(userController.getUser)
   .patch(userController.updateUser)
-  .delete(userController.deleteUser);
+  .delete(
+    protect,
+    restrictTo('admin', 'lead-guide'),
+    userController.deleteUser
+  );
 
 module.exports = router;
