@@ -71,15 +71,11 @@ userDATA.methods.changedPassword = function(jwtTime) {
   return false;
 };
 
-userDATA.methods.createPasswordResetToken = function() {
+userDATA.methods.createPasswordResetToken = async function() {
   //going to send this on email
   const resetToken = crypto.randomBytes(32).toString('hex');
 
-  //encryping token just for security purposes
-  this.passWordResetToken = crypto
-    .createHash('sha256')
-    .update(resetToken)
-    .digest('hex');
+  this.passWordResetToken = await bcrypt.hash(resetToken, 5);
 
   this.passWordResetExpired = Date.now() + 10 * 60 * 1000;
 

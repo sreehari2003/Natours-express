@@ -4,6 +4,8 @@ const AppError = require('../../utils/appError');
 const { promisify } = require('util');
 const catchAsync = require('../../utils/wrapAsync');
 const sendEmail = require('../../utils/email');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 //function to create the jwt token
 const createToken = id => {
   return jwt.sign({ id: id }, process.env.JWT_SECRET, {
@@ -113,7 +115,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
   }
   //genrate the random token
 
-  const resetToken = use.createPasswordResetToken();
+  const resetToken = await use.createPasswordResetToken();
 
   //prevent modal from run validation
   await use.save({ validateBeforeSave: false });
@@ -132,7 +134,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
     });
     res.status(200).json({
       ok: true,
-      message: 'request was successfull'
+      message: 'mail was successfully send'
     });
   } catch {
     use.passwordResetToken = undefined;
@@ -142,4 +144,34 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
     return next(new AppError('error sending email', 404));
   }
 });
-exports.resetPassword = async () => {};
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  //get user based on token
+  const { token } = req.params;
+  // const hashedToken = crypto
+  //   .createHash('sha256')
+  //   .update(token)
+  //   .digest('hex');
+  const hashedToken = await bcrypt.hash(token, 5);
+  const userReset = await User.findOne({
+    passWordResetToken: hashedToken
+    // passwordResetExpires: { $gt: Date.now() }
+  });
+  console.log(userReset);
+  if (!userReset) {
+    return next(new AppError('user does not exist or token was expired', 404));
+  }
+  console.log(userReset);
+  //update chnaged password
+  const { password, passwordConfirm } = req.body;
+  userReset.password = password;
+  userReset.passwordConfirm = passwordConfirm;
+  userReset.passWordResetToken = undefined;
+  userReset.passwordResetExpires = undefined;
+  await userReset.save();
+  // sending jwt
+  const tokens = createToken(userReset._id);
+  res.status(200).json({
+    ok: true,
+    token: tokens
+  });
+});
