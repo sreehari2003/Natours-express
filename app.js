@@ -1,5 +1,6 @@
 const express = require('express');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
@@ -9,6 +10,17 @@ const globalErrorHandler = require('./controllers/errorController');
 const app = express();
 
 // 1) MIDDLEWARES
+
+//limit the request from a single ip
+const limiter = rateLimit({
+  max: 100,
+  windowMs: 60 * 60 * 1000,
+  message: 'Too many request from this ip adress so please try again later'
+});
+
+// /api beacuse of api routes
+app.use('/api', limiter);
+
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
