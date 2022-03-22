@@ -170,3 +170,24 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
     token: tokens
   });
 });
+
+exports.updatePassword = catchAsync(async (req, res, next) => {
+  //get user from collection
+  const user = await User.findById(req.user.id).select('+password');
+  const { password, passwordConfirm, passwordCurrent } = req.body;
+  //check if posted current password matches
+  if (!(await user.correctPassword(passwordCurrent, user.password))) {
+    return next(new AppError('password mismatch', 401));
+  }
+  //if so update password
+  user.password = password;
+  user.passwordConfirm = passwordConfirm;
+
+  await user.save();
+  //log user in
+  const token = createToken(user._id);
+  res.status(201).json({
+    ok: true,
+    token
+  });
+});

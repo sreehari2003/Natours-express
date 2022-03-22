@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
+const user = require('./userModal');
 // const validator = require('validator');
 
 const tourSchema = new mongoose.Schema(
@@ -77,7 +78,32 @@ const tourSchema = new mongoose.Schema(
     secretTour: {
       type: Boolean,
       default: false
-    }
+    },
+    startLocation: {
+      //GeoJSON
+      type: {
+        type: String,
+        default: 'Point',
+        enum: ['Point']
+      },
+      coordinates: [Number],
+      address: 'String',
+      description: 'String'
+    },
+    location: [
+      {
+        type: {
+          type: String,
+          default: 'Point',
+          enum: ['Point']
+        },
+        coordinates: [Number],
+        address: 'String',
+        description: 'String',
+        day: Number
+      }
+    ],
+    guides: Array
   },
   {
     toJSON: { virtuals: true },
@@ -112,6 +138,13 @@ tourSchema.pre(/^find/, function(next) {
 
   this.start = Date.now();
   next();
+});
+
+///VIMP
+
+tourSchema.pre('save', async function(next) {
+  const guides = this.guides.map(async id => await user.findByID(id));
+  this.guides = await Promise.all(guides);
 });
 
 tourSchema.post(/^find/, function(docs, next) {
