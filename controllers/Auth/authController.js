@@ -147,20 +147,15 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 exports.resetPassword = catchAsync(async (req, res, next) => {
   //get user based on token
   const { token } = req.params;
-  // const hashedToken = crypto
-  //   .createHash('sha256')
-  //   .update(token)
-  //   .digest('hex');
+
   const hashedToken = await bcrypt.hash(token, 5);
   const userReset = await User.findOne({
-    passWordResetToken: hashedToken
-    // passwordResetExpires: { $gt: Date.now() }
+    passWordResetToken: hashedToken //, passwordResetExpires: { $gt: Date.now() }
   });
   console.log(userReset);
   if (!userReset) {
     return next(new AppError('user does not exist or token was expired', 404));
   }
-  console.log(userReset);
   //update chnaged password
   const { password, passwordConfirm } = req.body;
   userReset.password = password;
