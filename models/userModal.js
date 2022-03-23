@@ -42,7 +42,12 @@ const userDATA = new mongoose.Schema({
   },
   passWordChangedAt: Date,
   passWordResetToken: String,
-  passWordResetExpired: Date
+  passWordResetExpired: Date,
+  active: {
+    type: Boolean,
+    default: true,
+    select: false
+  }
 });
 
 //ENcrypting the password
@@ -53,6 +58,12 @@ userDATA.pre('save', async function(next) {
   this.password = await bcrypt.hash(this.password, 12);
 
   this.passwordConfirm = undefined;
+  next();
+});
+//regex
+userDATA.pre(/^find/, function(next) {
+  //ne = not equal
+  this.find({ active: { $ne: false } });
   next();
 });
 //comparing the password
