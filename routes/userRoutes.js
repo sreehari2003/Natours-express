@@ -5,6 +5,7 @@ const multer = require('multer');
 const { protect, restrictTo } = authController;
 const router = express.Router();
 
+//upload file path
 const upload = multer({ dest: 'public/img/users' });
 
 router.post('/signup', authController.signup);
@@ -19,7 +20,12 @@ router.patch(
   authController.updatePassword
 );
 router.patch('/updateME', authController.protect, userController.updateMe);
-router.delete('/deleteMe', authController.protect, userController.deleteMe);
+router.delete(
+  '/deleteMe',
+  authController.protect,
+  upload.single('photo'),
+  userController.deleteMe
+);
 
 router
   .route('/')

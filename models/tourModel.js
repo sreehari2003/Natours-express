@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
 const user = require('./userModal');
+const { Schema } = mongoose;
 // const validator = require('validator');
 
 const tourSchema = new mongoose.Schema(
@@ -103,7 +104,12 @@ const tourSchema = new mongoose.Schema(
         day: Number
       }
     ],
-    guides: Array
+    guides: [
+      {
+        type: Schema.ObjectId,
+        ref: 'User'
+      }
+    ]
   },
   {
     toJSON: { virtuals: true },
